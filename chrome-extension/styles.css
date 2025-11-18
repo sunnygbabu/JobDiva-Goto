@@ -1,0 +1,201 @@
+/* JobDiva-GoTo Bridge Extension Styles */
+
+/* Button Container */
+.jobdiva-goto-bridge-buttons {
+  display: flex;
+  gap: 10px;
+  margin: 15px 0;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 2px solid #e0e0e0;
+}
+
+/* Buttons */
+.jobdiva-goto-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.jobdiva-goto-call {
+  background: #28a745;
+  color: white;
+}
+
+.jobdiva-goto-call:hover {
+  background: #218838;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+}
+
+.jobdiva-goto-sms {
+  background: #007bff;
+  color: white;
+}
+
+.jobdiva-goto-sms:hover {
+  background: #0069d9;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+}
+
+.jobdiva-goto-btn:active {
+  transform: translateY(0);
+}
+
+/* Modal */
+.jobdiva-goto-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999999;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.jobdiva-goto-modal-content {
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(-50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.jobdiva-goto-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.jobdiva-goto-modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+}
+
+.jobdiva-goto-modal-close {
+  background: none;
+  border: none;
+  font-size: 28px;
+  color: #999;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.jobdiva-goto-modal-close:hover {
+  background: #f0f0f0;
+  color: #333;
+}
+
+.jobdiva-goto-modal-body {
+  padding: 24px;
+}
+
+.jobdiva-goto-modal-body p {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  color: #666;
+}
+
+.jobdiva-goto-modal-body textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  margin-top: 12px;
+  box-sizing: border-box;
+}
+
+.jobdiva-goto-modal-body textarea:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.jobdiva-goto-char-count {
+  text-align: right;
+  font-size: 12px;
+  color: #999;
+  margin-top: 5px;
+}
+
+.jobdiva-goto-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 24px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.jobdiva-goto-btn-primary,
+.jobdiva-goto-btn-secondary {
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.jobdiva-goto-btn-primary {
+  background: #007bff;
+  color: white;
+}
+
+.jobdiva-goto-btn-primary:hover {
+  background: #0069d9;
+}
+
+.jobdiva-goto-btn-primary:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.jobdiva-goto-btn-secondary {
+  background: #f0f0f0;
+  color: #333;
+}
+
+.jobdiva-goto-btn-secondary:hover {
+  background: #e0e0e0;
+}
