@@ -319,7 +319,7 @@
 
     // Check if we're on a candidate page
     // Adjust this logic based on JobDiva URL structure
-    const isCandidate Page = window.location.href.includes('candidate') || 
+    const isCandidatePage = window.location.href.includes('candidate') || 
                              window.location.href.includes('Candidate');
 
     if (isCandidatePage) {
