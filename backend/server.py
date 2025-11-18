@@ -10,6 +10,8 @@ from typing import List
 import uuid
 from datetime import datetime, timezone
 
+# Import route modules
+from routes import sms_routes, call_routes, webhook_routes, admin_routes
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -20,7 +22,11 @@ client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
 # Create the main app without a prefix
-app = FastAPI()
+app = FastAPI(
+    title="JobDiva-GoTo Bridge API",
+    description="Bridge service for integrating JobDiva ATS with GoTo Connect",
+    version="1.0.0"
+)
 
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
@@ -40,7 +46,23 @@ class StatusCheckCreate(BaseModel):
 # Add your routes to the router instead of directly to app
 @api_router.get("/")
 async def root():
-    return {"message": "Hello World"}
+    return {
+        "message": "JobDiva-GoTo Bridge API",
+        "version": "1.0.0",
+        "status": "operational",
+        "endpoints": {
+            "sms": "/api/sms/send",
+            "call": "/api/call/start",
+            "webhooks": {
+                "messages": "/api/webhooks/goto/messages",
+                "calls": "/api/webhooks/goto/call-events"
+            },
+            "admin": {
+                "mappings": "/api/admin/mappings",
+                "logs": "/api/admin/logs"
+            }
+        }
+    }
 
 @api_router.post("/status", response_model=StatusCheck)
 async def create_status_check(input: StatusCheckCreate):
@@ -65,6 +87,12 @@ async def get_status_checks():
             check['timestamp'] = datetime.fromisoformat(check['timestamp'])
     
     return status_checks
+
+# Include bridge service routes
+api_router.include_router(sms_routes.router)
+api_router.include_router(call_routes.router)
+api_router.include_router(webhook_routes.router)
+api_router.include_router(admin_routes.router)
 
 # Include the router in the main app
 app.include_router(api_router)
