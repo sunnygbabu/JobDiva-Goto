@@ -1,148 +1,139 @@
-import logging
-import uuid
-from typing import Dict, Any, Optional, List
-from datetime import datetime, timezone
+# app/backend/services/jobdiva_service.py
+"""
+Async JobDiva helper service.
 
-logger = logging.getLogger(__name__)
+Provides:
+- async create_candidate_note(candidate_id, note_text, recruiter_id=None)
+- async find_candidate_by_phone(phone_e164)
+"""
+
+import os
+import httpx
+import asyncio
+from typing import Optional
+
+
+JOBDIVA_BASE_URL = os.getenv("JOBDIVA_BASE_URL", "https://api.jobdiva.com")
+
+# Use ENV VAR NAMES here, not literal values
+JOBDIVA_CLIENT_ID = os.getenv("JOBDIVA_CLIENT_ID")   # optional based on JobDiva auth
+JOBDIVA_USERNAME = os.getenv("JOBDIVA_USERNAME")
+JOBDIVA_PASSWORD = os.getenv("JOBDIVA_PASSWORD")
+JOBDIVA_API_KEY = os.getenv("JOBDIVA_API_KEY")  # if JobDiva uses API key
+
+# If JobDiva uses a token-based auth, cache token here
+_jd_token_cache = {"token": None, "expires_at": 0}
+_jd_lock = asyncio.Lock()
+
+
+async def _get_jobdiva_headers() -> dict:
+    """
+    Return headers required by JobDiva API.
+    Adjust based on the actual auth method JobDiva expects:
+    - API key in header
+    - or Basic/Auth token via a login endpoint
+    """
+    # If they provide an API key:
+    if JOBDIVA_API_KEY:
+        return {"Content-Type": "application/json", "Authorization": f"Bearer {JOBDIVA_API_KEY}"}
+
+    # Otherwise, implement a login -> get token flow (placeholder)
+    async with _jd_lock:
+        import time
+
+        now = time.time()
+        if _jd_token_cache["token"] and now < _jd_token_cache["expires_at"] - 30:
+            return {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {_jd_token_cache['token']}",
+            }
+
+        if JOBDIVA_USERNAME and JOBDIVA_PASSWORD:
+            # TODO: replace /auth/login with the actual JobDiva auth endpoint
+            login_url = f"{JOBDIVA_BASE_URL}/auth/login"
+            async with httpx.AsyncClient(timeout=15) as client:
+                resp = await client.post(
+                    login_url,
+                    json={
+                        "username": JOBDIVA_USERNAME,
+                        "password": JOBDIVA_PASSWORD,
+                        # include client_id if JobDiva requires it
+                        # "client_id": JOBDIVA_CLIENT_ID,
+                    },
+                )
+                resp.raise_for_status()
+                body = resp.json()
+
+            token = body.get("access_token") or body.get("token")
+            expires_in = int(body.get("expires_in", 3600))
+            _jd_token_cache["token"] = token
+            _jd_token_cache["expires_at"] = time.time() + expires_in
+            return {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {token}",
+            }
+
+    raise RuntimeError("JobDiva credentials not configured in environment")
+
+
+async def create_candidate_note(
+    candidate_id: str, note_text: str, recruiter_id: Optional[str] = None
+) -> dict:
+    """
+    Create a candidate note/journal entry in JobDiva.
+    The actual endpoint/payload will depend on JobDiva API. Adjust below.
+    """
+    headers = await _get_jobdiva_headers()
+    # Placeholder endpoint - replace with actual JobDiva endpoint from their docs
+    url = f"{JOBDIVA_BASE_URL}/apiv2/candidates/{candidate_id}/notes"
+    payload = {"noteText": note_text}
+    if recruiter_id:
+        payload["recruiterId"] = recruiter_id
+
+    async with httpx.AsyncClient(timeout=15) as client:
+        resp = await client.post(url, json=payload, headers=headers)
+        resp.raise_for_status()
+        return resp.json()
+
+
+async def find_candidate_by_phone(phone_e164: str) -> Optional[dict]:
+    """
+    Search JobDiva for a candidate by phone.
+    Adjust the endpoint/payload to match JobDiva's search API.
+    """
+    headers = await _get_jobdiva_headers()
+    # Placeholder; confirm the actual search endpoint and payload
+    url = f"{JOBDIVA_BASE_URL}/apiv2/candidates/search"
+    payload = {"phone": phone_e164}
+    async with httpx.AsyncClient(timeout=15) as client:
+        resp = await client.post(url, json=payload, headers=headers)
+        if resp.status_code == 404:
+            return None
+        resp.raise_for_status()
+        j = resp.json()
+
+    # adapt this depending on JobDiva's response shape
+    candidates = j.get("candidates") or j.get("items") or j
+    if not candidates:
+        return None
+    if isinstance(candidates, list):
+        return candidates[0]
+    return candidates
+
 
 class JobDivaService:
     """
-    Service for interacting with JobDiva API.
-    
-    NOTE: This is a MOCKED implementation for development.
-    Replace with real JobDiva API calls when credentials are available.
+    Thin wrapper class so routes can use `jobdiva_service.method(...)`.
     """
-    
-    def __init__(self):
-        self.api_key = None
-        self.base_url = None
-        logger.info("JobDivaService initialized (MOCKED)")
-    
-    async def authenticate(self, api_key: str = None, base_url: str = None) -> bool:
-        """
-        Authenticate with JobDiva API.
-        
-        MOCKED: Returns True immediately.
-        REAL: Should validate credentials with JobDiva.
-        """
-        logger.info("[MOCKED] JobDiva authentication")
-        self.api_key = api_key or "mock_api_key"
-        self.base_url = base_url or "https://api.jobdiva.com"
-        return True
-    
-    async def create_candidate_note(
-        self,
-        candidate_id: str,
-        note_text: str,
-        note_type: str = "General"
-    ) -> Dict[str, Any]:
-        """
-        Create a journal/note on a candidate record in JobDiva.
-        
-        MOCKED: Returns success with fake note ID.
-        
-        REAL Implementation:
-        POST {base_url}/api/v1/candidates/{candidate_id}/notes
-        Headers:
-            Authorization: Bearer {api_key}
-            Content-Type: application/json
-        Body:
-            {
-                "noteText": note_text,
-                "noteType": note_type,
-                "timestamp": "2025-01-10T12:00:00Z"
-            }
-        """
-        logger.info(f"[MOCKED] Creating candidate note for {candidate_id}")
-        
-        note_id = f"note_{uuid.uuid4().hex[:12]}"
-        
-        return {
-            "success": True,
-            "note_id": note_id,
-            "candidate_id": candidate_id,
-            "note_text": note_text,
-            "created_at": datetime.now(timezone.utc).isoformat()
-        }
-    
-    async def find_candidate_by_phone(self, phone: str) -> Optional[Dict[str, Any]]:
-        """
-        Search for a candidate by phone number in JobDiva.
-        
-        MOCKED: Returns a fake candidate.
-        
-        REAL Implementation:
-        GET {base_url}/api/v1/candidates/search?phone={phone}
-        Headers:
-            Authorization: Bearer {api_key}
-        """
-        logger.info(f"[MOCKED] Searching candidate by phone: {phone}")
-        
-        # Simulate finding a candidate
-        return {
-            "candidate_id": f"cand_{uuid.uuid4().hex[:8]}",
-            "candidate_name": "John Doe",
-            "phone": phone,
-            "email": "john.doe@example.com",
-            "status": "Active"
-        }
-    
-    async def get_candidate(
-        self,
-        candidate_id: str
-    ) -> Optional[Dict[str, Any]]:
-        """
-        Get candidate details by ID.
-        
-        MOCKED: Returns fake candidate data.
-        
-        REAL Implementation:
-        GET {base_url}/api/v1/candidates/{candidate_id}
-        Headers:
-            Authorization: Bearer {api_key}
-        """
-        logger.info(f"[MOCKED] Fetching candidate {candidate_id}")
-        
-        return {
-            "candidate_id": candidate_id,
-            "candidate_name": "Jane Smith",
-            "phone": "+14155552671",
-            "email": "jane.smith@example.com",
-            "status": "Active",
-            "recruiter": "Alice Johnson"
-        }
-    
-    async def search_candidates(
-        self,
-        query: str,
-        limit: int = 10
-    ) -> List[Dict[str, Any]]:
-        """
-        Search candidates by various criteria.
-        
-        MOCKED: Returns sample candidates.
-        
-        REAL Implementation:
-        GET {base_url}/api/v1/candidates/search?q={query}&limit={limit}
-        Headers:
-            Authorization: Bearer {api_key}
-        """
-        logger.info(f"[MOCKED] Searching candidates: {query}")
-        
-        return [
-            {
-                "candidate_id": f"cand_{uuid.uuid4().hex[:8]}",
-                "candidate_name": "John Doe",
-                "phone": "+14155551234",
-                "email": "john@example.com"
-            },
-            {
-                "candidate_id": f"cand_{uuid.uuid4().hex[:8]}",
-                "candidate_name": "Jane Smith",
-                "phone": "+14155555678",
-                "email": "jane@example.com"
-            }
-        ]
 
-# Singleton instance
+    async def create_candidate_note(
+        self, candidate_id: str, note_text: str, recruiter_id: Optional[str] = None
+    ) -> dict:
+        return await create_candidate_note(candidate_id, note_text, recruiter_id)
+
+    async def find_candidate_by_phone(self, phone_e164: str) -> Optional[dict]:
+        return await find_candidate_by_phone(phone_e164)
+
+
+# This is what routes import: from services.jobdiva_service import jobdiva_service
 jobdiva_service = JobDivaService()
