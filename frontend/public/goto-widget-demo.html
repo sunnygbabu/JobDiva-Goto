@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GoTo Widget - Live Demo</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <style>
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    .demo-bg {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 20px;
+    }
+    .resize-handle {
+      position: absolute;
+      background: transparent;
+      z-index: 10;
+    }
+    .resize-handle-left {
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 8px;
+      cursor: ew-resize;
+    }
+    .resize-handle-left:hover {
+      background: rgba(255, 244, 100, 0.3);
+    }
+    .resize-handle-right {
+      right: 0;
+      top: 0;
+      bottom: 0;
+      width: 8px;
+      cursor: ew-resize;
+    }
+    .resize-handle-right:hover {
+      background: rgba(255, 244, 100, 0.3);
+    }
+    .resize-handle-bottom {
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 8px;
+      cursor: ns-resize;
+    }
+    .resize-handle-bottom:hover {
+      background: rgba(255, 244, 100, 0.3);
+    }
+    .resize-handle-corner {
+      right: 0;
+      bottom: 0;
+      width: 16px;
+      height: 16px;
+      cursor: nwse-resize;
+    }
+    .resize-handle-corner:hover {
+      background: rgba(255, 244, 100, 0.5);
+    }
+  </style>
+</head>
+<body class="demo-bg">
+  <div style="max-width: 1200px; margin: 0 auto;">
+    <div style="background: white; border-radius: 16px; padding: 32px; margin-bottom: 24px; box-shadow: 0 20px 60px rgba(0,0,0,0.15);">
+      <h1 style="font-size: 2.5rem; font-weight: bold; margin-bottom: 8px;">🎉 GoTo Widget Live Demo</h1>
+      <p style="color: #6b7280; font-size: 1.125rem;">Look at the <strong>right side</strong> → The floating widget is live!</p>
+      
+      <div style="background: linear-gradient(135deg, #fffef5 0%, #fefce8 100%); border: 2px solid #fef08a; border-radius: 12px; padding: 20px; margin-top: 24px;">
+        <h2 style="font-weight: bold; margin-bottom: 16px; color: #854d0e;">✨ Features:</h2>
+        <ul style="list-style: none; padding: 0; margin: 0;">
+          <li style="margin-bottom: 12px;">🎨 <strong>Light Yellow theme</strong> - Clean, modern colors</li>
+          <li style="margin-bottom: 12px;">📐 <strong>Resizable</strong> - Drag edges to resize</li>
+          <li style="margin-bottom: 12px;">📏 <strong>Full height</strong> - Maximizes screen space</li>
+          <li style="margin-bottom: 12px;">📍 <strong>Smart positioning</strong> - Stays where you need it</li>
+          <li style="margin-bottom: 12px;">⚡ <strong>Sign in</strong> - Click to access all features</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div id="goto-widget-root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    const mockConversations = [
+      {
+        id: 'conv-1',
+        contactName: 'Jane Smith',
+        phoneNumber: '+14155551234',
+        lastMessage: 'Thank you for reaching out!',
+        lastMessageTime: new Date(Date.now() - 1000 * 60 * 15),
+        unreadCount: 2,
+        candidateId: 'cand-123456',
+        messages: [
+          { id: 'msg-1', text: 'Hi Jane! I have an exciting opportunity to discuss with you.', timestamp: new Date(Date.now() - 1000 * 60 * 30), direction: 'outbound', status: 'delivered' },
+          { id: 'msg-2', text: 'Thank you for reaching out!', timestamp: new Date(Date.now() - 1000 * 60 * 15), direction: 'inbound' },
+          { id: 'msg-3', text: 'When would be a good time to talk?', timestamp: new Date(Date.now() - 1000 * 60 * 15), direction: 'inbound' }
+        ]
+      },
+      {
+        id: 'conv-2',
+        contactName: 'John Doe',
+        phoneNumber: '+14155559876',
+        lastMessage: 'Sounds good, talk soon!',
+        lastMessageTime: new Date(Date.now() - 1000 * 60 * 60 * 2),
+        unreadCount: 0,
+        candidateId: 'cand-789012',
+        messages: [
+          { id: 'msg-4', text: 'Hi John, following up on our conversation.', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 3), direction: 'outbound', status: 'delivered' },
+          { id: 'msg-5', text: 'Sounds good, talk soon!', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2), direction: 'inbound' }
+        ]
+      }
+    ];
+
+    const mockCallHistory = [
+      { id: 'call-1', phoneNumber: '+14155551234', contactName: 'Jane Smith', direction: 'outbound', duration: 155, timestamp: new Date(Date.now() - 1000 * 60 * 45) },
+      { id: 'call-2', phoneNumber: '+14155559876', contactName: 'John Doe', direction: 'inbound', duration: 320, timestamp: new Date(Date.now() - 1000 * 60 * 60 * 3) },
+      { id: 'call-3', phoneNumber: '+14155552468', direction: 'missed', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 5) }
+    ];
+
+    const formatPhoneNumber = (phone) => {
+      const cleaned = phone.replace(/\D/g, '');
+      if (cleaned.length === 11 && cleaned.startsWith('1')) {
+        return `+1 (${cleaned.slice(1, 4)}) ${cleaned.slice(4, 7)}-${cleaned.slice(7)}`;
+      }
+      return phone;
+    };
+
+    const formatTimestamp = (date) => {
+      const diffMs = Date.now() - date.getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      if (diffMins < 1) return 'Just now';
+      if (diffMins < 60) return `${diffMins}m ago`;
+      const diffHours = Math.floor(diffMs / 3600000);
+      if (diffHours < 24) return `${diffHours}h ago`;
+      return date.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    };
+
+    const FloatingGotoWidget = () => {
+      const [widgetState, setWidgetState] = useState('expanded');
+      const [size, setSize] = useState({ width: 575, height: window.innerHeight - 40 });
+      const [position, setPosition] = useState({ x: window.innerWidth - 595, y: 20 });
+      const [isDragging, setIsDragging] = useState(false);
+      const [isResizing, setIsResizing] = useState(null);
+      const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+      const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
+      const [connectionStatus, setConnectionStatus] = useState('not_signed_in');
+      const [assignedNumber, setAssignedNumber] = useState('');
+      const [conversations, setConversations] = useState(mockConversations);
+      const [selectedTab, setSelectedTab] = useState('messages');
+      const [selectedConvId, setSelectedConvId] = useState(conversations[0]?.id);
+      const [messageText, setMessageText] = useState('');
+      const [phoneNumber, setPhoneNumber] = useState('');
+      const [callStatus, setCallStatus] = useState('idle');
+      
+      const widgetRef = useRef(null);
+
+      useEffect(() => {
+        const handleWindowResize = () => {
+          if (widgetState === 'expanded') {
+            setSize(prev => ({
+              ...prev,
+              height: Math.min(prev.height, window.innerHeight - 40)
+            }));
+            setPosition(prev => ({
+              x: Math.min(prev.x, window.innerWidth - size.width - 20),
+              y: Math.min(prev.y, window.innerHeight - size.height - 20)
+            }));
+          }
+        };
+        window.addEventListener('resize', handleWindowResize);
+        return () => window.removeEventListener('resize', handleWindowResize);
+      }, [size, widgetState]);
+
+      const handleMouseDown = (e) => {
+        const target = e.target;
+        if (!target.closest('[data-widget-header]') || target.closest('button')) return;
+        setIsDragging(true);
+        setDragOffset({ x: e.clientX - position.x, y: e.clientY - position.y });
+      };
+
+      const handleResizeStart = (e, direction) => {
+        e.stopPropagation();
+        setIsResizing(direction);
+        setResizeStart({ 
+          x: e.clientX, 
+          y: e.clientY, 
+          width: size.width, 
+          height: size.height,
+          posX: position.x,
+          posY: position.y
+        });
+      };
+
+      useEffect(() => {
+        const handleMouseMove = (e) => {
+          if (isDragging) {
+            const newX = Math.max(0, Math.min(e.clientX - dragOffset.x, window.innerWidth - size.width));
+            const newY = Math.max(0, Math.min(e.clientY - dragOffset.y, window.innerHeight - (widgetState === 'minimized' ? 50 : size.height)));
+            setPosition({ x: newX, y: newY });
+          } else if (isResizing) {
+            const deltaX = e.clientX - resizeStart.x;
+            const deltaY = e.clientY - resizeStart.y;
+
+            if (isResizing === 'left') {
+              const newWidth = Math.max(400, resizeStart.width - deltaX);
+              const maxX = resizeStart.posX + resizeStart.width - 400;
+              const newX = Math.max(0, Math.min(resizeStart.posX + deltaX, maxX));
+              setSize(prev => ({ ...prev, width: newWidth }));
+              setPosition(prev => ({ ...prev, x: newX }));
+            }
+            if (isResizing === 'right' || isResizing === 'corner') {
+              const newWidth = Math.max(400, Math.min(resizeStart.width + deltaX, window.innerWidth - position.x - 20));
+              setSize(prev => ({ ...prev, width: newWidth }));
+            }
+            if (isResizing === 'bottom' || isResizing === 'corner') {
+              const newHeight = Math.max(400, Math.min(resizeStart.height + deltaY, window.innerHeight - position.y - 20));
+              setSize(prev => ({ ...prev, height: newHeight }));
+            }
+          }
+        };
+
+        const handleMouseUp = () => {
+          setIsDragging(false);
+          setIsResizing(null);
+        };
+
+        if (isDragging || isResizing) {
+          document.addEventListener('mousemove', handleMouseMove);
+          document.addEventListener('mouseup', handleMouseUp);
+        }
+
+        return () => {
+          document.removeEventListener('mousemove', handleMouseMove);
+          document.removeEventListener('mouseup', handleMouseUp);
+        };
+      }, [isDragging, isResizing, dragOffset, resizeStart, size, position]);
+
+      const handleToggle = () => {
+        if (widgetState === 'expanded') {
+          // When minimizing, keep it at the bottom right
+          setPosition(prev => ({ 
+            x: window.innerWidth - 133, 
+            y: window.innerHeight - 60 
+          }));
+          setWidgetState('minimized');
+        } else {
+          // When expanding, position it so it expands upward from bottom right
+          const expandedHeight = size.height;
+          setPosition(prev => ({ 
+            x: window.innerWidth - size.width - 20, 
+            y: Math.max(20, window.innerHeight - expandedHeight - 20)
+          }));
+          setWidgetState('expanded');
+        }
+      };
+
+      const handleSignIn = async () => {
+        setConnectionStatus('connecting');
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        setAssignedNumber('+14155551000');
+        setConnectionStatus('connected');
+      };
+
+      const handleSendMessage = async () => {
+        if (!messageText.trim()) return;
+        const newMsg = {
+          id: `msg-${Date.now()}`,
+          text: messageText,
+          timestamp: new Date(),
+          direction: 'outbound',
+          status: 'sent'
+        };
+        setConversations(prev => prev.map(c => 
+          c.id === selectedConvId 
+            ? { ...c, messages: [...c.messages, newMsg], lastMessage: messageText, lastMessageTime: new Date() }
+            : c
+        ));
+        setMessageText('');
+      };
+
+      const handleCall = async () => {
+        if (!phoneNumber.trim()) return;
+        setCallStatus('ringing');
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        setCallStatus('in_call');
+      };
+
+      const handleEndCall = async () => {
+        setCallStatus('ended');
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        setCallStatus('idle');
+      };
+
+      const selectedConv = conversations.find(c => c.id === selectedConvId);
+
+      return (
+        <div
+          ref={widgetRef}
+          style={{
+            position: 'fixed',
+            left: `${position.x}px`,
+            top: `${position.y}px`,
+            width: widgetState === 'minimized' ? '113px' : `${size.width}px`,
+            height: widgetState === 'minimized' ? '50px' : `${size.height}px`,
+            zIndex: 999999,
+            cursor: isDragging ? 'grabbing' : 'default',
+            background: 'white',
+            borderRadius: '12px',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden'
+          }}
+          onMouseDown={handleMouseDown}
+        >
+          <div 
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '12px 16px',
+              background: 'linear-gradient(135deg, #fef08a 0%, #fde047 100%)',
+              color: '#000000',
+              cursor: 'move'
+            }}
+            data-widget-header
+          >
+            {widgetState === 'expanded' ? (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ width: '32px', height: '32px', background: 'white', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+                    <svg style={{ width: '20px', height: '20px', color: '#000000' }} fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
+                    </svg>
+                  </div>
+                  <span style={{ fontWeight: '700', fontSize: '14px' }}>GoTo Panel</span>
+                </div>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '4px 12px',
+                  borderRadius: '20px',
+                  fontSize: '11px',
+                  fontWeight: '600',
+                  background: connectionStatus === 'connected' ? '#22c55e' : connectionStatus === 'connecting' ? '#fbbf24' : '#9ca3af',
+                  color: '#fff'
+                }}>
+                  <div style={{
+                    width: '6px',
+                    height: '6px',
+                    borderRadius: '50%',
+                    background: '#fff',
+                    animation: connectionStatus === 'connecting' ? 'pulse 1.5s infinite' : 'none'
+                  }}></div>
+                  {connectionStatus === 'connected' ? 'Connected' : connectionStatus === 'connecting' ? 'Connecting...' : 'Not signed in'}
+                </div>
+                <button onClick={handleToggle} style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.5)', borderRadius: '6px', border: 'none', cursor: 'pointer', transition: 'all 0.2s' }} onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.8)'} onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.5)'}>
+                  <svg style={{ width: '16px', height: '16px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" /></svg>
+                </button>
+              </>
+            ) : (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontWeight: '700', fontSize: '12px' }}>GoTo</span>
+                  <div style={{
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    background: connectionStatus === 'connected' ? '#22c55e' : connectionStatus === 'connecting' ? '#fbbf24' : '#9ca3af'
+                  }}></div>
+                </div>
+                <button onClick={handleToggle} style={{ width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.5)', borderRadius: '6px', border: 'none', cursor: 'pointer', transition: 'all 0.2s' }} onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.8)'} onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.5)'}>
+                  <svg style={{ width: '14px', height: '14px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
+                </button>
+              </>
+            )}
+          </div>
+
+          {widgetState === 'expanded' && (
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              {connectionStatus === 'not_signed_in' ? (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', padding: '48px 24px' }}>
+                  <div style={{ textAlign: 'center', maxWidth: '400px' }}>
+                    <div style={{ width: '80px', height: '80px', background: 'linear-gradient(135deg, #fef08a 0%, #fde047 100%)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+                      <svg style={{ width: '40px', height: '40px', color: '#000000' }} fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
+                      </svg>
+                    </div>
+                    <h2 style={{ fontSize: '28px', fontWeight: '700', color: '#000000', marginBottom: '12px' }}>Sign in to GoTo</h2>
+                    <p style={{ color: '#6b7280', marginBottom: '32px', fontSize: '14px' }}>Sign in with your GoTo account to send SMS and make calls.</p>
+                    <button
+                      onClick={handleSignIn}
+                      disabled={connectionStatus === 'connecting'}
+                      style={{
+                        width: '100%',
+                        background: 'linear-gradient(135deg, #fef08a 0%, #fde047 100%)',
+                        color: '#000000',
+                        padding: '14px 24px',
+                        borderRadius: '8px',
+                        fontWeight: '700',
+                        border: 'none',
+                        cursor: connectionStatus === 'connecting' ? 'not-allowed' : 'pointer',
+                        fontSize: '16px',
+                        opacity: connectionStatus === 'connecting' ? 0.6 : 1,
+                        transition: 'all 0.2s',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                      }}
+                      onMouseOver={(e) => {
+                        if (connectionStatus !== 'connecting') {
+                          e.currentTarget.style.transform = 'translateY(-2px)';
+                          e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+                        }
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+                      }}
+                    >
+                      {connectionStatus === 'connecting' ? 'Connecting...' : 'Sign in with GoTo'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div style={{ display: 'flex', background: '#f9fafb' }}>
+                    <button
+                      onClick={() => setSelectedTab('messages')}
+                      style={{
+                        flex: 1,
+                        padding: '14px 16px',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        border: 'none',
+                        background: selectedTab === 'messages' ? 'transparent' : '#fef08a',
+                        color: '#1f2937',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        borderBottom: selectedTab === 'messages' ? '2px solid transparent' : '2px solid #facc15'
+                      }}
+                    >
+                      Messages {conversations.reduce((sum, c) => sum + c.unreadCount, 0) > 0 && (
+                        <span style={{ marginLeft: '6px', background: '#22c55e', color: 'white', fontSize: '10px', borderRadius: '10px', padding: '2px 6px', fontWeight: '700' }}>{conversations.reduce((sum, c) => sum + c.unreadCount, 0)}</span>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => setSelectedTab('calls')}
+                      style={{
+                        flex: 1,
+                        padding: '14px 16px',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        border: 'none',
+                        background: selectedTab === 'calls' ? 'transparent' : '#fef08a',
+                        color: '#1f2937',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        borderBottom: selectedTab === 'calls' ? '2px solid transparent' : '2px solid #facc15'
+                      }}
+                    >
+                      Calls
+                    </button>
+                  </div>
+
+                  {selectedTab === 'messages' && (
+                    <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+                      <div style={{ width: '35%', borderRight: '1px solid #e5e7eb', display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ padding: '12px', borderBottom: '1px solid #e5e7eb' }}>
+                          <input type="text" placeholder="Search..." style={{ width: '100%', padding: '8px 12px', fontSize: '13px', border: '1px solid #e5e7eb', borderRadius: '8px', outline: 'none' }} />
+                        </div>
+                        <div style={{ flex: 1, overflowY: 'auto' }}>
+                          {conversations.map(conv => (
+                            <button
+                              key={conv.id}
+                              onClick={() => setSelectedConvId(conv.id)}
+                              style={{
+                                width: '100%',
+                                textAlign: 'left',
+                                padding: '12px',
+                                border: 'none',
+                                borderBottom: '1px solid #f3f4f6',
+                                background: selectedConvId === conv.id ? '#fefce8' : 'white',
+                                cursor: 'pointer',
+                                transition: 'background 0.2s'
+                              }}
+                              onMouseOver={(e) => {
+                                if (selectedConvId !== conv.id) e.currentTarget.style.background = '#f9fafb';
+                              }}
+                              onMouseOut={(e) => {
+                                if (selectedConvId !== conv.id) e.currentTarget.style.background = 'white';
+                              }}
+                            >
+                              <div style={{ fontWeight: '600', fontSize: '14px', color: '#1f2937', marginBottom: '4px' }}>{conv.contactName}</div>
+                              <div style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '4px' }}>{formatPhoneNumber(conv.phoneNumber)}</div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <p style={{ fontSize: '13px', color: '#6b7280', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{conv.lastMessage}</p>
+                                {conv.unreadCount > 0 && <span style={{ marginLeft: '8px', background: '#22c55e', color: 'white', fontSize: '10px', borderRadius: '10px', padding: '2px 8px', fontWeight: '700' }}>{conv.unreadCount}</span>}
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                        {selectedConv && (
+                          <>
+                            <div style={{ padding: '12px 16px', borderBottom: '1px solid #e5e7eb', background: '#f9fafb' }}>
+                              <h3 style={{ fontWeight: '700', fontSize: '16px', margin: '0 0 4px 0', color: '#1f2937' }}>{selectedConv.contactName}</h3>
+                              <p style={{ fontSize: '12px', color: '#9ca3af', margin: 0 }}>{formatPhoneNumber(selectedConv.phoneNumber)}</p>
+                            </div>
+                            <div style={{ flex: 1, overflowY: 'auto', padding: '16px', background: '#fafafa' }}>
+                              {selectedConv.messages.map(msg => (
+                                <div key={msg.id} style={{ display: 'flex', justifyContent: msg.direction === 'outbound' ? 'flex-end' : 'flex-start', marginBottom: '12px' }}>
+                                  <div style={{
+                                    maxWidth: '75%',
+                                    padding: '10px 14px',
+                                    borderRadius: '16px',
+                                    background: msg.direction === 'outbound' ? 'linear-gradient(135deg, #fef08a 0%, #fde047 100%)' : '#ffffff',
+                                    color: msg.direction === 'outbound' ? '#000000' : '#1f2937',
+                                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                                  }}>
+                                    <p style={{ fontSize: '14px', margin: '0 0 4px 0' }}>{msg.text}</p>
+                                    <div style={{ fontSize: '11px', color: msg.direction === 'outbound' ? '#000000' : '#9ca3af', opacity: msg.direction === 'outbound' ? 0.7 : 1 }}>
+                                      {msg.timestamp.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                            <div style={{ padding: '16px', background: 'white', borderTop: '1px solid #e5e7eb' }}>
+                              <div style={{ display: 'flex', gap: '8px' }}>
+                                <textarea
+                                  value={messageText}
+                                  onChange={(e) => setMessageText(e.target.value)}
+                                  onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSendMessage())}
+                                  placeholder="Type message..."
+                                  rows={2}
+                                  style={{ flex: 1, padding: '10px', fontSize: '14px', border: '1px solid #e5e7eb', borderRadius: '8px', resize: 'none', outline: 'none' }}
+                                />
+                                <button onClick={handleSendMessage} disabled={!messageText.trim()} style={{
+                                  padding: '10px 20px',
+                                  background: messageText.trim() ? 'linear-gradient(135deg, #fef08a 0%, #fde047 100%)' : '#e5e7eb',
+                                  color: messageText.trim() ? '#000000' : '#9ca3af',
+                                  borderRadius: '8px',
+                                  fontWeight: '700',
+                                  border: 'none',
+                                  cursor: messageText.trim() ? 'pointer' : 'not-allowed',
+                                  fontSize: '14px',
+                                  boxShadow: messageText.trim() ? '0 2px 4px rgba(0,0,0,0.05)' : 'none'
+                                }}>Send</button>
+                              </div>
+                              <div style={{ fontSize: '11px', color: '#9ca3af', textAlign: 'right', marginTop: '4px' }}>{messageText.length} / 160</div>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedTab === 'calls' && (
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                      <div style={{ padding: '16px', borderBottom: '1px solid #e5e7eb' }}>
+                        <input
+                          type="text"
+                          value={phoneNumber}
+                          onChange={(e) => setPhoneNumber(e.target.value.replace(/[^0-9+]/g, ''))}
+                          placeholder="Enter phone number"
+                          style={{ width: '100%', padding: '14px', fontSize: '18px', textAlign: 'center', border: '1px solid #e5e7eb', borderRadius: '8px', outline: 'none', marginBottom: '16px' }}
+                        />
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '16px' }}>
+                          {['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#'].map(digit => (
+                            <button
+                              key={digit}
+                              onClick={() => setPhoneNumber(prev => prev + digit)}
+                              style={{
+                                height: '56px',
+                                background: 'white',
+                                border: '1px solid #e5e7eb',
+                                borderRadius: '8px',
+                                fontSize: '24px',
+                                fontWeight: '700',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                                color: '#1f2937'
+                              }}
+                              onMouseOver={(e) => {
+                                e.currentTarget.style.background = '#fef08a';
+                                e.currentTarget.style.borderColor = '#fde047';
+                              }}
+                              onMouseOut={(e) => {
+                                e.currentTarget.style.background = 'white';
+                                e.currentTarget.style.borderColor = '#e5e7eb';
+                              }}
+                            >
+                              {digit}
+                            </button>
+                          ))}
+                        </div>
+                        {callStatus === 'idle' || callStatus === 'ended' ? (
+                          <button onClick={handleCall} disabled={!phoneNumber} style={{
+                            width: '100%',
+                            background: phoneNumber ? '#22c55e' : '#e5e7eb',
+                            color: 'white',
+                            padding: '14px',
+                            borderRadius: '8px',
+                            fontWeight: '700',
+                            border: 'none',
+                            cursor: phoneNumber ? 'pointer' : 'not-allowed',
+                            fontSize: '16px',
+                            boxShadow: phoneNumber ? '0 2px 8px rgba(34,197,94,0.2)' : 'none'
+                          }}>
+                            Call
+                          </button>
+                        ) : (
+                          <button onClick={handleEndCall} style={{
+                            width: '100%',
+                            background: '#ef4444',
+                            color: 'white',
+                            padding: '14px',
+                            borderRadius: '8px',
+                            fontWeight: '700',
+                            border: 'none',
+                            cursor: 'pointer',
+                            fontSize: '16px',
+                            boxShadow: '0 2px 8px rgba(239,68,68,0.2)'
+                          }}>
+                            Hang Up ({callStatus})
+                          </button>
+                        )}
+                      </div>
+                      <div style={{ flex: 1, overflowY: 'auto' }}>
+                        <div style={{ padding: '8px 16px', background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}><h3 style={{ fontSize: '11px', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', margin: 0 }}>Recent Calls</h3></div>
+                        {mockCallHistory.map(call => (
+                          <div key={call.id} style={{ padding: '16px', borderBottom: '1px solid #f3f4f6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                              <div style={{ fontWeight: '600', fontSize: '14px', marginBottom: '4px', color: '#1f2937' }}>{call.contactName || 'Unknown'}</div>
+                              <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '4px' }}>{formatPhoneNumber(call.phoneNumber)}</div>
+                              {call.duration && <div style={{ fontSize: '11px', color: '#9ca3af' }}>{Math.floor(call.duration/60)}m {call.duration%60}s</div>}
+                            </div>
+                            <button onClick={() => setPhoneNumber(call.phoneNumber)} style={{ width: '40px', height: '40px', background: '#22c55e', border: 'none', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(34,197,94,0.2)' }}>
+                              <svg style={{ width: '20px', height: '20px', color: 'white' }} fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
+                              </svg>
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          {widgetState === 'expanded' && (
+            <>
+              <div 
+                className="resize-handle resize-handle-left" 
+                onMouseDown={(e) => handleResizeStart(e, 'left')}
+              />
+              <div 
+                className="resize-handle resize-handle-right" 
+                onMouseDown={(e) => handleResizeStart(e, 'right')}
+              />
+              <div 
+                className="resize-handle resize-handle-bottom" 
+                onMouseDown={(e) => handleResizeStart(e, 'bottom')}
+              />
+              <div 
+                className="resize-handle resize-handle-corner" 
+                onMouseDown={(e) => handleResizeStart(e, 'corner')}
+              />
+            </>
+          )}
+        </div>
+      );
+    };
+
+    ReactDOM.render(<FloatingGotoWidget />, document.getElementById('goto-widget-root'));
+  </script>
+</body>
+</html>
